@@ -14,22 +14,23 @@ samples = pd.read_csv("Klebeverbindungen_Daten/Proben.csv" ,sep=';', error_bad_l
 samples = samples.set_index("ID")
 #print(proben)
 
-#2.Step: calculating the mean - HF for all samples
+#2.Step: calculating the mean - HF for all samples, if the calculated values are already available, they should be called from the .csv file. 
+mean_HF_of_all_samples = pd.read_csv('Klebeverbindungen_Daten/meanHF.csv', sep = ",")
 
-data = []
-for index, row in samples.iterrows():
-    path1 = "Klebeverbindungen_Daten/2D-MakroImages/Probe" + index + "_1.png"
-    path2 = "Klebeverbindungen_Daten/2D-MakroImages/Probe" + index + "_2.png"
-    HF_features = texturefeaturesExtract.extract_HF_mean_of_a_probe(path1, path2)
-    #HF_features = np.append(HF_features, row['stress angle'])
-    data.append(HF_features)
-mean_HF_of_all_samples = pd.DataFrame(data=data, columns=["Angular Second Moment", "Contrast", "Correlation", "Sum of Squares: Variance", "Inverse Difference Moment", "Sum Average", 
-                        "Sum Variance", "Sum Entropy", "Entropy", "Difference Variance", "Difference Entropy", "Info. Measure of Correlation 1", "Info. Measure of Correlation 2"])  
 targets =   samples['stress angle'].to_numpy() 
-mean_HF_of_all_samples['target'] = targets
 
-
-mean_HF_of_all_samples.to_csv('Klebeverbindungen_Daten/meanHF.csv', index=False)
+if(mean_HF_of_all_samples.empty or len(samples.index) != len(mean_HF_of_all_samples.index)):
+    data = []
+    for index, row in samples.iterrows():
+        path1 = "Klebeverbindungen_Daten/2D-MakroImages/Probe" + index + "_1.png"
+        path2 = "Klebeverbindungen_Daten/2D-MakroImages/Probe" + index + "_2.png"
+        HF_features = texturefeaturesExtract.extract_HF_mean_of_a_probe(path1, path2)
+        #HF_features = np.append(HF_features, row['stress angle'])
+        data.append(HF_features)
+    mean_HF_of_all_samples = pd.DataFrame(data=data, columns=["Angular Second Moment", "Contrast", "Correlation", "Sum of Squares: Variance", "Inverse Difference Moment", "Sum Average", 
+                            "Sum Variance", "Sum Entropy", "Entropy", "Difference Variance", "Difference Entropy", "Info. Measure of Correlation 1", "Info. Measure of Correlation 2"])  
+    mean_HF_of_all_samples['target'] = targets
+    mean_HF_of_all_samples.to_csv('Klebeverbindungen_Daten/meanHF.csv', index=False)
 
 
 
