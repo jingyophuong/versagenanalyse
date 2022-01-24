@@ -105,13 +105,15 @@ def apply_gaussfilter_for_surface(data, lambdac):
 def compute_Rsm(profil,dx,  HeightThreshold, SpacingThreshold): 
      #compute Rsm: as the average distance between zero crossings of the profile
         #find all zero crossing
-    n = len(profil.x)
     r = profil.zr
+    n = len(r)
     zerocrossing = []
     for j in range(n-1):
         if(r[j] * r[j+1] < 0): 
             zerocrossing.append(j)
         #make sure the first zero is a low to high crossing
+    if len(zerocrossing) == 0: 
+        return 0
     if(r[zerocrossing[0]] > 0 and r[zerocrossing[0] +1] <0): 
         zerocrossing = zerocrossing[1: len(zerocrossing)]
     
@@ -167,10 +169,11 @@ def cal_roughness_params_for_a_profil(data, y):
     xmax = profil['x'].max()
     xmin = profil['x'].min()
     dis = xmax - xmin +1 
+
     step = int(dis/6)
-    if xmin > step: 
+    if xmin > step or step < 48: 
         return
-    f_limit = int(step /2)
+    f_limit = int(step /2) + xmin
     r_a_sum = 0
     r_z_sum = 0
     r_z_n = []
@@ -183,6 +186,8 @@ def cal_roughness_params_for_a_profil(data, y):
         filter1 = profil['x'] >= f_limit + i* step 
         filter2 =  profil['x'] <= f_limit + (i+1)*step
         single_mess_section = profil.loc[filter1 & filter2]
+        if single_mess_section.empty:
+            return
         single_mess_section =  single_mess_section.reset_index(drop = True)
         #cal Ra
         single_mess_section.__setitem__('absz', abs(single_mess_section.zr))
@@ -223,7 +228,8 @@ def cal_roughness_params_for_a_profil(data, y):
         r_ku = (1/ pow(rq,4)) * z4_mean
         r_ku_sum += r_ku
         
-        
+    
+
 
     Roughness_Params = Roughness_Params.append({'y' : y, 'Ra' : r_a_sum / 5, 'Rz': r_z_sum / 5, 
                                                 'Rmax': np.max(r_z_n), 'Rq': r_q_sum / 5, 'Rsm': r_sm_sum/5,
@@ -240,7 +246,9 @@ def cal_Roughness_params(data):
   
     for y in n_y:
         r_of_a_profil = cal_roughness_params_for_a_profil(data=data, y = y)
-        Roughness_Params = Roughness_Params.append(r_of_a_profil, ignore_index= True)
+        if not r_of_a_profil is None:
+            if not r_of_a_profil.empty:
+                Roughness_Params = Roughness_Params.append(r_of_a_profil, ignore_index= True)
     return Roughness_Params
 
 
@@ -319,7 +327,7 @@ def cal_waveness(data):
 ############################################################TOPOGRAPHY#############################################################################
 ############################################################TOPOGRAPHY#############################################################################
 #compute all possible parameter of each profile of surface
-def computer_topography_of_all_profiles(xyz_datei_path):
+def compute_topography_of_all_profiles(xyz_datei_path):
     
     data = pd.read_csv(xyz_datei_path, sep=';', names=['x', 'y', 'z'])
     xyz_minmax =[]
@@ -338,7 +346,7 @@ def computer_topography_of_all_profiles(xyz_datei_path):
     return topo
 
 #compute mean and standard deviation of each parameter  
-def computer_topography_of_surface(xyz_datei_path):
+def compute_topography_of_surface(xyz_datei_path):
 
     data = pd.read_csv(xyz_datei_path, sep=';', names=['x', 'y', 'z'])
     xyz_minmax =[]
@@ -372,8 +380,8 @@ def computer_topography_of_surface(xyz_datei_path):
 ##############################################################MAIN#################################################################################
 ##############################################################MAIN#################################################################################
 
-t = computer_topography_of_surface(r'Klebeverbindungen_Daten\2D-MakroImages\Klebeverbindungen\ProbeE1_1_pointcloud-rel.txt')
-print(t)
+#t = compute_topography_of_surface(r'Klebeverbindungen_Daten\2D-MakroImages\Klebeverbindungen\ProbeE1_1_pointcloud-rel.txt')
+#print(t)
 #plt.plot(r.y, r.Ra, label='Ra')
 #plt.plot(r.y, r.Rq, label='Rq')
 #plt.plot(r.y, r.Rz, label = 'Rz')
