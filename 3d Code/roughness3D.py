@@ -2,10 +2,9 @@
 #Datum: from 11.2021 - 
 
 import os
-import cv2
 import numpy as np
 import pandas as pd
-
+from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt 
@@ -45,7 +44,36 @@ def cal_Roughness_params(data):
     Roughness_Params = Roughness_Params.append({'Sa' :  Sa , 'Sq' : Sq,
                                                 'Sz': Sz, 'Ssk': Ssk, 'Ssu': Ssu }, ignore_index= True)
 
-    print(data)
+    #print(data)
+    return Roughness_Params
+
+def cal_Roughness_params(path):
+    data = pd.read_csv(path,sep=';', names=['x', 'y', 'z'])
+    Roughness_Params = pd.DataFrame(columns=['Sa', 'Sq', 'Sz', 'Ssk', 'Ssu'])
+    # cal abs
+    data.__setitem__('absz', abs(data.z))
+    # cal ^2
+    data.__setitem__('z2', data.z * data.z)
+    # cal ^3
+    data.__setitem__('z3', data.z2 * data.z)
+    # cal ^4
+    data.__setitem__('z4', data.z3 * data.z)
+    # find heighest and lowest z
+    data = data.sort_values(by=['z'])
+    valleys = abs(data.z.head(5))
+    data = data.sort_values(by=['z'], ascending = False)
+    summits = abs(data.z.head(5))
+
+    Sz = (valleys.sum() + summits.sum()) / 5
+    Sa = data['absz'].mean()
+    Sq = np.sqrt(data['z2'].mean())
+    Ssk = 1/ (pow(Sq, 3)) * data.z3.mean()
+    Ssu = 1/ (pow(Sq, 4)) * data.z4.mean()
+
+    Roughness_Params = Roughness_Params.append({'Sa' :  Sa , 'Sq' : Sq,
+                                                'Sz': Sz, 'Ssk': Ssk, 'Ssu': Ssu }, ignore_index= True)
+
+    #print(data)
     return Roughness_Params
 
 #calculating Ra, Rz, Rmax, Rq for sampling surfaces
@@ -91,48 +119,4 @@ def cal_Roughness_params_sampling(depthmap, roi):
 
 
 ###################################################GAUSS-FILTER#######################################################################
-
-
-
-
-###################################################MAIN###############################################################################
-directory = 'H:/MA/versagenanalyse/Klebeverbindungen_Daten/3d/RelativData/'
-    # iterate over files in
-    # that directory
-zmin = 0
-zmax = 0
-
-Roughness_Params = pd.DataFrame(columns=['Sa', 'Sq', 'Sz', 'Ssk', 'Ssu'])
-
-for filename in os.listdir(directory):
-    f = os.path.join(directory, filename)
-    if os.path.isfile(f):
-        data = pd.read_csv(f, sep=";", comment='#', header=None, names=['x', 'y', 'z'], index_col= None)
-        Roughness_Params = Roughness_Params.append(cal_Roughness_params(data), ignore_index=True)
-
-print(Roughness_Params)
-
-
-pca = PCA(n_components=2)
-principalComponent = pca.fit_transform(Roughness_Params.values)
-principalDf = pd.DataFrame(data = principalComponent, index = np.arange(20), columns=["P1", "P2"])
-
-#print(principalDf)
-
-fig  = plt.figure(figsize=(10,10))
-ax = fig.add_subplot(1,1,1)
-ax.set_xlabel('P1', fontsize = 15)
-ax.set_ylabel('P2', fontsize = 15)
-ax.set_title('Correlation between texture features and stress angle', fontsize = 20)
-
-colors = ['r', 'g', 'b', 'c']
-ta = [0,30,60,90]
-for target in np.arange(20):
-    ax.scatter(principalDf.loc[target, "P1"], principalDf.loc[target, "P2"], s = 50)
-
-#ax.legend(ta)
-ax.grid()
-plt.legend(ta, title = "stress angle")
-plt.show()
-
 
