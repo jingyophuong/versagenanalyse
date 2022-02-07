@@ -371,7 +371,7 @@ def compute_topography_of_surface(xyz_datei_path):
         cov = std/m
         surface_topo['m_'+col_name]= [m]
         surface_topo['std_'+col_name] = [std]
-        surface_topo['cov' + col_name] = [cov]
+        #surface_topo['cov' + col_name] = [cov]
     return surface_topo
 ##############################################################MAIN#################################################################################
 ##############################################################MAIN#################################################################################
@@ -392,3 +392,12 @@ def compute_topography_of_surface(xyz_datei_path):
 #plt.plot(r.y, r.Rku, label = 'Rku')
 #plt.legend()
 #cal_roughness_params_for_a_profil(data , 500)
+
+a = [3,5]
+b = [5, 8]
+c = [8 , 12]
+d = [12, 25]
+
+print(np.mean(a), np.mean(b), np.mean(c),np.mean(d))
+print(np.std(a), np.std(b), np.std(c),np.std(d))
+print(np.std(a)/np.mean(a) , np.std(b)/np.mean(b), np.std(c)/np.mean(c), np.std(d)/np.mean(d))

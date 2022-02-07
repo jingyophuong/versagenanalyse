@@ -104,6 +104,7 @@ def get_labels_of_grid():
     apb = g.flatten()
     return apb
 
-# fs = extract_HF_of_a_probe("./Klebeverbindungen_Daten/2D-MakroImages/ProbeE2_1.png", 
-#                                         "./Klebeverbindungen_Daten/2D-MakroImages/ProbeE2_2.png", axis=1)
-# print(fs)
+if __name__ == "__main__":
+    fs = extract_HF_of_a_probe(r"Klebeverbindungen_Daten\2D-MakroImages\Betamate 1496V\ProbeR2_1.png", 
+                                     r'Klebeverbindungen_Daten\2D-MakroImages\Betamate 1496V\ProbeR2_2.png', axis=1)
+print(fs)

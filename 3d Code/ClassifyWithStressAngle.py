@@ -1,3 +1,4 @@
+from torch import scatter
 import roughness3D
 import  roughness2D
 import os
@@ -14,6 +15,27 @@ import matplotlib.pyplot as plt
 ##############################################################CLASSIFICATION-WITH-ROUGHNESS3D#################################################################################
 ##############################################################CLASSIFICATION-WITH-ROUGHNESS3D#################################################################################
 ##############################################################CLASSIFICATION-WITH-ROUGHNESS3D#################################################################################
+def show_data(data, indexes):
+    fig = plt.figure()
+    data_nr = len(data.columns)
+    axsNr = int(data_nr /2 +1)
+    fig,axs = plt.subplots(2, axsNr, figsize = (20,15))
+
+    i = 0
+    indexes = np.array(indexes) 
+    indexes = indexes.astype(int)
+    #colormap = np.array(['r', 'g', 'c','b'])
+    for col in data.columns:
+        x = int(i/axsNr)
+        y = int(i % axsNr)
+        scatter = axs[x,y].scatter(np.arange(len(data)), data[col] , c = indexes)
+        axs[x,y].legend(*scatter.legend_elements(), title = 'classes')
+        i = i+1
+        
+        axs[x,y].set_title(col)
+    plt.show()
+ 
+
 
 def classify_with_roughness3d():
     # #1.Step: loading the general information of all samples
@@ -35,15 +57,19 @@ def classify_with_roughness3d():
             if(os.path.isfile(path1) and os.path.isfile(path2)):
                 roughness_probe = roughness3D.cal_Roughness_params(path1)
                 roughness_probe =roughness_probe.append(roughness3D.cal_Roughness_params(path2), ignore_index = True)
-                roughness = roughness_probe.mean()
+                #roughness_std = roughness_probe.std()
+                roughness_mean = roughness_probe.mean().rename(str.lower, axis='columns')
+                #topo = pd.concat([roughness_std, roughness_mean])
+
             #HF_features = np.append(HF_features, row['stress angle'])
-                data = data.append(roughness, ignore_index=True)
+                data = data.append(roughness_mean, ignore_index=True)
                 targets.append(row['stress angle'])
         
         data.to_csv('Klebeverbindungen_Daten/roughness3d.csv', index=False)
 
     X = data.values
-
+    print(data)
+    show_data(data, targets)
     #print(X)
     pca = PCA(n_components=2)
     principalComponent = pca.fit_transform(X)
@@ -57,8 +83,8 @@ def classify_with_roughness3d():
     ax.set_ylabel('P2', fontsize = 15)
     ax.set_title('Correlation between texture features and stress angle', fontsize = 20)
 
-    colors = ['r', 'c']
-    ta = [0,90]
+    colors = ['r','b', 'c']
+    ta = [0,60,90]
     for target, color in zip(ta, colors):
         ax.scatter(principalDf.loc[target, "P1"], principalDf.loc[target, "P2"], c = color, s = 50)
 
@@ -102,6 +128,7 @@ def classify_with_roughness2d():
         
         data.to_csv('Klebeverbindungen_Daten/roughness2d.csv', index=False)
 
+    print(data)
     X = data.values
 
     #print(X)
@@ -115,10 +142,10 @@ def classify_with_roughness2d():
     ax = fig.add_subplot(1,1,1)
     ax.set_xlabel('P1', fontsize = 15)
     ax.set_ylabel('P2', fontsize = 15)
-    ax.set_title('Correlation between texture features and stress angle', fontsize = 20)
+    ax.set_title('Correlation between topography features and stress angle', fontsize = 20)
 
-    colors = ['r', 'c']
-    ta = [0,90]
+    colors = ['r', 'b', 'c']
+    ta = [0,60,90]
     for target, color in zip(ta, colors):
         ax.scatter(principalDf.loc[target, "P1"], principalDf.loc[target, "P2"], c = color, s = 50)
 
@@ -133,5 +160,5 @@ def classify_with_roughness2d():
 ##############################################################MAIN#################################################################################
 ##############################################################MAIN#################################################################################
 ##############################################################MAIN#################################################################################
-classify_with_roughness2d()
+classify_with_roughness3d()
 

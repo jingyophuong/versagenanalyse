@@ -15,6 +15,7 @@ import configparser
 
 
 def distance_to_fitplane_cal(plane_normalvector, plane_position, point):
+
     qsum = 0.0
     dsum = 0.0
     for i in range(len(plane_normalvector)):
@@ -201,7 +202,7 @@ def read_plane_configdata(configdata_path):
     return res
 
 def relativ_z_with_plane_cal(data, plane_normalvector, plane_position):
-    data['z'] = distance_to_fitplane_cal(plane_normalvector, plane_position, [data['x'], data['y'], data['z']])
+    data['z'] = distance_to_fitplane_cal(plane_normalvector, plane_position, [data['x'],data['y'], data['z']])
     return data
 
 
@@ -211,17 +212,20 @@ def cal_all_absdata_to_reldata(directory):
    
     # iterate over files in
     # that directory
-    for filename in os.listdir(directory):
+    files = ['Probe_D91.txt', 'Probe_D92.txt', 'C12-1.txt', 'C12-2.txt']
+    for filename in files:
         f = os.path.join(directory, filename)
         # checking if it is a file
         if os.path.isfile(f):
             name = filename.split('.')
             planefilename = 'Plane/' + name[0]+ '-Plane.txt'
-            data = pd.read_csv(f, sep=";", comment='#', header=None, names=['x', 'y', 'z'], index_col= None)
+            data = pd.read_csv(f, sep=";", comment='#', header=None, names=['x', 'y', 'z'], index_col= None).astype(float)
             planePath  = os.path.join(directory, planefilename)
             if os.path.isfile(planePath):
                 planeinfo = read_plane_configdata(planePath)
+                print(planeinfo)
                 data = relativ_z_with_plane_cal(data=data, plane_normalvector= planeinfo[0], plane_position= planeinfo[1])
+                
                 os.path.join(directory, 'RelativData')
                 data.to_csv( directory + 'RelativData/' +name[0] + "-rel.txt", sep = ';', index = False, header = None)
 
@@ -313,8 +317,5 @@ def GrayscaleImagesFromPC(zmax, zmin):
    
 
 
-directory = 'J:/MA/versagenanalyse/Klebeverbindungen_Daten/3d/'
+directory = 'Klebeverbindungen_Daten/3d/'
 cal_all_absdata_to_reldata(directory=directory)
-zminmax = getzminmax()
-print(zminmax)
-GrayscaleImagesFromPC(zmin=zminmax[0], zmax=zminmax[1])
