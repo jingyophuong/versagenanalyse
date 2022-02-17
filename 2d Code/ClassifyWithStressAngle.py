@@ -16,7 +16,7 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
-def load_features(images_path = "",  extract = False, save = False):
+def load_features(images_path = "",  extract = False, save = False, save_name = ""):
     if(extract):  
         samples = pd.read_csv("Klebeverbindungen_Daten/Proben.csv" ,sep=';', error_bad_lines=False)
         targets =   []
@@ -25,21 +25,26 @@ def load_features(images_path = "",  extract = False, save = False):
         for index, row in samples.iterrows():
             path1 = images_path + 'Probe' + index + "_1.png"
             path2 =images_path + 'Probe'+ index + "_2.png"
-            #print(path1)
+          
             if(os.path.isfile(path1) and os.path.isfile(path2)):
-                HF_features = texturefeaturesExtract.extract_HF_mean_of_a_probe(path1, path2)
+                #HF_features = texturefeaturesExtract.extract_HF_mean_of_a_probe(path1, path2)
+                #f.append(texturefeaturesExtract.extract_haralick_features(0, path = path1))
             #HF_features = np.append(HF_features, row['stress angle'])
-                data.append(HF_features)
+                
+                f = np.row_stack((texturefeaturesExtract.extract_haralick_features(0,path1), texturefeaturesExtract.extract_haralick_features(0, path2)))
+        
+                data.append(np.mean(f, axis = 0).T)
+                #print(data)
                 targets.append(row['stress angle'])
         mean_HF_of_all_samples = pd.DataFrame(data=data, columns=["Angular Second Moment", "Contrast", "Correlation", "Sum of Squares: Variance", "Inverse Difference Moment", "Sum Average", 
                             "Sum Variance", "Sum Entropy", "Entropy", "Difference Variance", "Difference Entropy", "Info. Measure of Correlation 1", "Info. Measure of Correlation 2"])  
         if save:
             save_data = mean_HF_of_all_samples
             save_data['targets'] = targets 
-            mean_HF_of_all_samples.to_csv(images_path + "meanHF.csv", sep = ",")
+            mean_HF_of_all_samples.to_csv(images_path + save_name, sep = ",")
         return [mean_HF_of_all_samples, targets]
     else:
-        data = pd.read_csv(images_path + "meanHF.csv", sep = ",", error_bad_lines=False)
+        data = pd.read_csv(images_path + save_name, sep = ",", error_bad_lines=False)
         targets = np.array(data['targets'])
         mean_HF_of_all_samples = data.drop(columns = ['targets'])
         return [mean_HF_of_all_samples, targets]
@@ -78,7 +83,7 @@ def feature_importance(data, targets):
     colors = np.where(moreImpotance, 'green','red')
     #print(moreImp)
     forest_importances.plot.bar(yerr = std, ax = ax, color = colors)
-    plt.axhline(y=mean_impotance, color='r', linestyle='-')
+    #plt.axhline(y=mean_impotance, color='r', linestyle='-')
     ax.set_title("Feature importances using MDI")
     ax.set_ylabel("Mean decrease in impurity")
     fig.tight_layout()
@@ -162,11 +167,13 @@ def trying_with_some_classifiers(data, targets):
 
 
 if __name__ == "__main__":
-    data, features =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/SikaPower533/", extract=True)
+    #data, features =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/", save_name = "all_features.csv")
+     
+    #data, features =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/SikaPower533/",  save_name = 'sika')
         
-    #data, features =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/Betamate 1496V/", extract=True)
-
-    #print(data)
-    #print(features)
+    data, features =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/Betamate 1496V/", extract = True)
+    #data = data.iloc[: , 1:]
+    print(data)
+    print(features)
     data = feature_importance(data, features)
     perform_PCA(data, features)
