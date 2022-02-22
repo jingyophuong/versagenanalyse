@@ -1,13 +1,26 @@
+#from Phuong Pham - 18.02.2022 based on texture-feature sourcecode of skikit-image modul
+#this file is used for compute the haralick features of a surface, included the round surface, by those the underground pixels shouldn't be counted on glcm
 from asyncio.windows_events import NULL
-from turtle import distance
-import jinja2
-from matplotlib.pyplot import axis
-from skimage.feature import greycomatrix
 import numpy as np
 import mahotas as mt
+import cv2
+from _texture import (_glcm_loop)
 
 class Haralick: 
     
+    def round_object_repair(self, img, underground = 0):
+        width, height = img.shape
+        r = int(min(width, height)/2)
+        m_x = int(width / 2)
+        m_y = int(height /2)
+        img = np.array(img)
+
+        I , J = np.ogrid[0: width, 0: height]
+
+        dist = np.sqrt((I-m_x)** 2 + (J - m_y)**2)
+        c =  np.logical_and(dist > r, img == underground)
+        return np.where(c, -1, img)
+
     haralick_labels = ["Angular Second Moment",
                    "Contrast",
                    "Correlation",
@@ -22,7 +35,8 @@ class Haralick:
                    "Information Measure of Correlation 1",
                    "Information Measure of Correlation 2",
                    "Maximal Correlation Coefficient"]
-    def check_nD(array, ndim, arg_name='image'):
+                   
+    def check_nD(array, ndim,  arg_name='image'):
         array = np.asanyarray(array)
         msg_incorrect_dim = "The parameter `%s` must be a %s-dimensional array"
         msg_empty_array = "The parameter `%s` cannot be an empty array"
@@ -35,8 +49,15 @@ class Haralick:
                 msg_incorrect_dim % (arg_name, '-or-'.join([str(n) for n in ndim]))
             )
      # default constructor
-    def __init__(self, image, levels = None):
-        self.image = image
+    def __init__(self, image, is_round_object = False, underground = 0, levels = None):
+        if(len(image.shape) > 2): 
+            raise("Just grayscale image would be excepted!")
+        if(is_round_object): 
+            self.image = self.round_object_repair(img = image, underground = underground)
+            #print(self.image)
+        else:
+            self.image = image
+     
         self.distances = [1]
         self.P = NULL
         self.levels = levels
@@ -58,33 +79,13 @@ class Haralick:
         self.P = np.zeros((self.levels, self.levels, len(self.distances), len(self.angles)), 
                         dtype=np.uint32, order='C')
        
-        self.distances = np.ascontiguousarray(self.distances)
-        self.angles = np.ascontiguousarray(self.angles)
+        self.distances = np.ascontiguousarray(self.distances, dtype=np.float64)
+        self.angles = np.ascontiguousarray(self.angles, dtype=np.float64)
         #count coo histogramm
         rows, cols = image.shape
-        
-        for a_idx in range(self.angles.shape[0]): 
-            angle = self.angles[a_idx]
-            for d_ix in range(self.distances.shape[0]):
-                distance = self.distances[d_ix]
 
-                offset_row = round(np.sin(angle) * distance)
-                offset_col = round(np.cos(angle)*distance)
+        _glcm_loop(image, self.distances, self.angles, self.levels, self.P)
 
-                start_row = int(max(0, -offset_row))
-                end_row = min(rows, int(rows - offset_row))
-                
-                start_col = int(max(0, -offset_col))
-                end_col = min (cols,int(cols - offset_col))
-                for r in range(start_row, end_row):
-                    for c in range(start_col, end_col):
-                        i = image[r,c]
-                        row = int(r + offset_row)
-                        col = int(c + offset_col)
-                        j = image[row,col]
-                        if(0 <= i < self.levels and 0 <= j <self.levels):
-                            self.P[i,j, d_ix, a_idx] +=1
-        
         Pt = np.transpose(self.P, (1, 0, 2, 3))
         self.P = self.P + Pt
 
@@ -94,23 +95,33 @@ class Haralick:
     def props(self):
         if self.P == NULL: 
             self.glcm()
+        
         f = mt.features.texture.haralick_features(self.P)
         return f
 
-image = np.array([[0, 0, 1, 1],
-                  [0, 0, 1, 1],
-                  [0, 2, 2, 2],
-                  [2, 2, 3, 3]], dtype=np.uint8)
 
-image1 = np.array([[-1, 0, 0, 1, 1],
-                  [-1, 0, 0, 1, 1],
-                  [-1, 0, 2, 2, 2],
-                  [-1, 2, 2, 3, 3]], dtype=np.int32)
+def test():
+    image = np.array([[0, 0, 1, 1],
+                    [0, 0, 1, 1],
+                    [0, 2, 2, 2],
+                    [2, 2, 3, 3]], dtype=np.uint8)
+
+    image1 = np.array([[-1, 0, 0, 1, 1],
+                    [-1, 0, 0, 1, 1],
+                    [-1, 0, 2, 2, 2],
+                    [-1, 2, 2, 3, 3]], dtype=np.int32)
 
 
-h = Haralick(image)
+    h = Haralick(image)
 
-print('mit meiner manipunierten Ansatz für image  \n', h.props())
+    print('mit meiner manipunierten Ansatz für image  \n', h.props())
 
-h1 = Haralick(image1)
-print('mit meiner manipunierten Ansatz für image1  \n', h1.props())
+    h1 = Haralick(image1)
+    print('mit meiner manipunierten Ansatz für image1  \n', h1.props())
+
+if __name__ == '__main__':
+    image1 = cv2.imread(r"Klebeverbindungen_Daten\2D-MakroImages\Betamate 1496V\ProbeR1_1.png")
+    gray1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+    
+    h = Haralick(gray1, True, 255)
+    print(h.props())

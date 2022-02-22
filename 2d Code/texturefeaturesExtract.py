@@ -1,31 +1,28 @@
 #from Phuong T. Pham - Begin: 08.10.2021
-from mailbox import MH
 from statistics import median_high
 import cv2
 import numpy as np
-import os
-import glob
 import mahotas as mt
 import matplotlib.pyplot as plt
 import string
 import pandas as pd
+import haralick
 
-
-
-
-def extract_haralick_features_manuell(image):
-    return
+    
 #define a extract haralick features function
-def extract_haralick_features(image, path = ''):
+def extract_haralick_features(image, path = '', round_object = False, underground = 0):
     if(path != ''): 
         image = cv2.imread(path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    if round_object:
+        h = haralick.Haralick(image, round_object, underground)
+        features = h.props()
+    else: 
+        features = mt.features.haralick(image)
     
-    features = mt.features.haralick(image)
-
     haralick_features_mean = features.mean(axis=0)
     return haralick_features_mean
-
+    
 
 #define a extract LBP features function
 def extract_LBP(image):
@@ -200,48 +197,12 @@ def round_image_mani(image):
     return image
 
 if __name__ == "__main__":
-    #fs = extract_HF_mean_of_a_probe(r"Klebeverbindungen_Daten\2D-MakroImages\Betamate 1496V\ProbeR2_1.png",  r'Klebeverbindungen_Daten\2D-MakroImages\Betamate 1496V\ProbeR2_2.png')
-    #fs = np.mean(fs, axis = 1)
-    image = cv2.imread(r"Klebeverbindungen_Daten\Test\1.png")
-    image2 = cv2.imread(r"Klebeverbindungen_Daten\Test\2.png")
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray2 = cv2.cvtColor(image2, cv2.COLOR_RGB2GRAY)
+  
+    image1 = cv2.imread(r"Klebeverbindungen_Daten\2D-MakroImages\Betamate 1496V\ProbeR1_1.png")
+    gray1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
 
-    image3 = cv2.imread(r"Klebeverbindungen_Daten\Test\ProbeR1_3.png")
-    gray3 = cv2.cvtColor(image3, cv2.COLOR_BGR2GRAY)
+    print(extract_haralick_features(gray1, round_object=True, underground=255))
 
-    image4 = cv2.imread(r"Klebeverbindungen_Daten\Test\ProbeR1_4.png")
-    gray4 = cv2.cvtColor(image4, cv2.COLOR_BGR2GRAY)
+    image2 = cv2.imread(r"Klebeverbindungen_Daten\Test\ProbeR1_2.png")
+    gray2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
 
-    fig,axs  = plt.subplots(1,2, figsize=(10,10))
-    #axs[0].imshow(gray)
-    #axs[1].imshow(gray2)
-    #axs[2].imshow(gray3)
-    #axs[3].imshow(gray4)
-
-    # features_kernel = pd.DataFrame()
-    # features_kernel = features_kernel.append(features_with_kernel(gray), ignore_index=True)
-    # features_kernel =features_kernel.append(features_with_kernel(gray2), ignore_index=True)
-    # features_kernel =features_kernel.append(features_with_kernel(gray3, white= False), ignore_index=True)
-    # features_kernel =features_kernel.append(features_with_kernel(gray4), ignore_index=True)
-    # print(features_kernel)
-    columns=["Angular Second Moment", "Contrast", "Correlation", "Sum of Squares: Variance", "Inverse Difference Moment", "Sum Average", 
-                            "Sum Variance", "Sum Entropy", "Entropy", "Difference Variance", "Difference Entropy", "Info. Measure of Correlation 1", "Info. Measure of Correlation 2"] 
-   
-    features_grid = pd.DataFrame()
-
-    features_grid = features_grid.append(pd.Series(extract_haralick_features(gray), index= columns), ignore_index=True)
-    features_grid =features_grid.append(pd.Series(extract_haralick_features(gray2), index= columns), ignore_index=True)
-    features_grid =features_grid.append(pd.Series(extract_haralick_features(gray3), index= columns), ignore_index=True)
-    features_grid =features_grid.append(pd.Series(extract_haralick_features(gray4), index= columns), ignore_index=True)
-    print(features_grid)
-    #print(fs)
-    
-    # plt.show()
-    #features_with_kernel(gray)
-    image5 = cv2.imread(r"Klebeverbindungen_Daten\Test\ProbeR4_1.png")
-    axs[0].imshow(image5)
-
-    image5 = round_image_mani(image5)
-    axs[1].imshow(image5)
-    plt.show()

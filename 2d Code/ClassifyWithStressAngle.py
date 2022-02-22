@@ -16,6 +16,8 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
+
+
 def load_features(images_path = "",  extract = False, save = False, save_name = ""):
     if(extract):  
         samples = pd.read_csv("Klebeverbindungen_Daten/Proben.csv" ,sep=';', error_bad_lines=False)
@@ -30,9 +32,10 @@ def load_features(images_path = "",  extract = False, save = False, save_name = 
                 #HF_features = texturefeaturesExtract.extract_HF_mean_of_a_probe(path1, path2)
                 #f.append(texturefeaturesExtract.extract_haralick_features(0, path = path1))
             #HF_features = np.append(HF_features, row['stress angle'])
-                
-                f = np.row_stack((texturefeaturesExtract.extract_haralick_features(0,path1), texturefeaturesExtract.extract_haralick_features(0, path2)))
-        
+                f = np.row_stack((texturefeaturesExtract.extract_haralick_features(0,path1, round_object='R' in index, underground=255),
+                                     texturefeaturesExtract.extract_haralick_features(0, path2, round_object= 'R' in index, underground= 255)))
+
+               # print(f)
                 data.append(np.mean(f, axis = 0).T)
                 #print(data)
                 targets.append(row['stress angle'])
