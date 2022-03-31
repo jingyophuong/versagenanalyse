@@ -1,19 +1,29 @@
 #from Phuong T. Pham - Begin: 08.10.2021
 from statistics import median_high
 import cv2
+from cv2 import GaussianBlur
 import numpy as np
 import mahotas as mt
 import matplotlib.pyplot as plt
 import string
 import pandas as pd
+#from torch import convolution
 import haralick
+import math
+from scipy import ndimage as ndi
 
-    
+ 
+##################################################HARALICK - FEATURES##################################################################################
+##################################################HARALICK - FEATURES##################################################################################
+##################################################HARALICK - FEATURES##################################################################################
+##################################################HARALICK - FEATURES##################################################################################
+
 #define a extract haralick features function
 def extract_haralick_features(image, path = '', round_object = False, underground = 0):
     if(path != ''): 
         image = cv2.imread(path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        #print(extract_LBP(image))
     if round_object:
         h = haralick.Haralick(image, round_object, underground)
         features = h.props()
@@ -101,6 +111,10 @@ def extract_HF_mean_of_a_probe(grid_features):
 def extract_HF_mean_of_a_probe(image1_path, image2_path, grid = False):
     features = extract_HF_of_a_probe(image1_path, image2_path, grid = grid)
     return np.mean(features).values
+    
+def extract_HF_std_of_a_probe(image1_path, image2_path, grid = False):
+    features = extract_HF_of_a_probe(image1_path, image2_path, grid = grid)
+    return np.std(features).values
 
 def get_labels_of_grid():
     g = string.ascii_uppercase
@@ -196,13 +210,160 @@ def round_image_mani(image):
 
     return image
 
+
+##################################################GRADIENT - GABORFILTER##################################################################################
+##################################################GRADIENT - GABORFILTER##################################################################################
+##################################################GRADIENT - GABORFILTER##################################################################################
+##################################################GRADIENT - GABORFILTER##################################################################################
+##################################################GRADIENT - GABORFILTER##################################################################################
+
+def convolution(image, kernel, average=False, verbose=False):
+    if len(image.shape) == 3:
+        print("Found 3 Channels : {}".format(image.shape))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        print("Converted to Gray Channel. Size : {}".format(image.shape))
+    else:
+        print("Image Shape : {}".format(image.shape))
+
+    print("Kernel Shape : {}".format(kernel.shape))
+
+    if verbose:
+        plt.imshow(image, cmap='gray')
+        plt.title("Image")
+        plt.show()
+
+    image_row, image_col = image.shape
+    kernel_row, kernel_col = kernel.shape
+
+    output = np.zeros(image.shape)
+
+    pad_height = int((kernel_row - 1) / 2)
+    pad_width = int((kernel_col - 1) / 2)
+
+    padded_image = np.zeros((image_row + (2 * pad_height), image_col + (2 * pad_width)))
+
+    padded_image[pad_height:padded_image.shape[0] - pad_height, pad_width:padded_image.shape[1] - pad_width] = image
+
+    if verbose:
+        plt.imshow(padded_image, cmap='gray')
+        plt.title("Padded Image")
+        plt.show()
+
+    for row in range(image_row):
+        for col in range(image_col):
+            output[row, col] = np.sum(kernel * padded_image[row:row + kernel_row, col:col + kernel_col])
+            if average:
+                output[row, col] /= kernel.shape[0] * kernel.shape[1]
+
+    print("Output Image size : {}".format(output.shape))
+
+    if verbose:
+        plt.imshow(output, cmap='gray')
+        plt.title("Output Image using {}X{} Kernel".format(kernel_row, kernel_col))
+        plt.show()
+
+    return output
+
+def dnorm(x, mu, sd):
+    return 1 / (np.sqrt(2 * np.pi) * sd) * np.e ** (-np.power((x - mu) / sd, 2) / 2)
+
+
+def gaussian_kernel(size, sigma=1, verbose=False):
+    kernel_1D = np.linspace(-(size // 2), size // 2, size)
+    for i in range(size):
+        kernel_1D[i] = dnorm(kernel_1D[i], 0, sigma)
+    kernel_2D = np.outer(kernel_1D.T, kernel_1D.T)
+
+    kernel_2D *= 1.0 / kernel_2D.max()
+
+    if verbose:
+        plt.imshow(kernel_2D, interpolation='none', cmap='gray')
+        plt.title("Kernel ( {}X{} )".format(size, size))
+        plt.show()
+
+    return kernel_2D
+
+
+def gaussian_blur(image, kernel_size, verbose=False):
+    kernel = gaussian_kernel(kernel_size, sigma=math.sqrt(kernel_size), verbose=verbose)
+    return convolution(image, kernel, average=True, verbose=verbose)
+
+def egde_detection(image, filter, show = False):
+    img_x = convolution(image, filter, show)
+
+    if show:
+        plt.imshow(img_x, cmap = 'gray')
+        plt.title("Horizontal Edge")
+        plt.show()
+    
+    img_y = convolution(image, np.flip(filter.T, axis=0), show)
+
+    if show:
+        plt.imshow(img_y, cmap = 'gray')
+        plt.title("Vertical Edge")
+        plt.show()
+    
+    gradient = np.sqrt(np.square(img_x) + np.square(img_y))
+    gradient += 255.0 / gradient.max() #normalize
+
+    if show:
+        plt.imshow(gradient, cmap='gray')
+        plt.title('gradient')
+        plt.show()
+    return gradient
+
+
+def build_filters():
+    filters = []
+    ksize = 9
+    for theta in np.arange(0, np.pi, np.pi / 8):
+        for lamda in np.arange(0, np.pi, np.pi/4): 
+            kern = cv2.getGaborKernel((ksize, ksize), 1.0, theta, lamda, 0.5, 0, ktype=cv2.CV_32F)
+            kern /= 1.5*kern.sum()
+            filters.append(kern)
+    return filters
+
+def gabor_process(img, filters):
+    accum = np.zeros_like(img)
+    for kern in filters:
+        fimg = cv2.filter2D(img, -1, kern)
+        np.maximum(accum, fimg, accum)
+    return accum
+
+
+def getGaborFeatures(path, sobel_filter, gabor_kernels):
+    image = cv2.imread(path)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    res = []
+    edge_img = egde_detection(image, sobel_filter, False)
+    for i in range(len(gabor_kernels)):
+        res1 = gabor_process(edge_img, gabor_kernels[i])
+        res.append(np.asarray(res1))
+    return res
 if __name__ == "__main__":
   
-    image1 = cv2.imread(r"Klebeverbindungen_Daten\2D-MakroImages\Betamate 1496V\ProbeR1_1.png")
+    image1 = cv2.imread(r"Klebeverbindungen_Daten\2D-MakroImages\Betamate 1496V\ProbeE1_1.png")
     gray1 = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
 
-    print(extract_haralick_features(gray1, round_object=True, underground=255))
+    # print(extract_haralick_features(gray1, round_object=True, underground=255))
 
-    image2 = cv2.imread(r"Klebeverbindungen_Daten\Test\ProbeR1_2.png")
-    gray2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
+    # image2 = cv2.imread(r"Klebeverbindungen_Daten\Test\ProbeR1_2.png")
+    # gray2 = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
+
+    filter = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+    
+
+
+    kernels = []
+    res = []
+    label = []
+
+    filters = build_filters()
+    filters = np.asarray(filters)
+
+    
+
+
+
 

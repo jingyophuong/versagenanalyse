@@ -3,6 +3,7 @@ import texturefeaturesExtract
 import os
 import pandas as pd
 import numpy as np
+import cv2
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt 
 from sklearn.model_selection import train_test_split
@@ -29,18 +30,37 @@ def load_features(images_path = "",  extract = False, save = False, save_name = 
             path2 =images_path + 'Probe'+ index + "_2.png"
           
             if(os.path.isfile(path1) and os.path.isfile(path2)):
-                #HF_features = texturefeaturesExtract.extract_HF_mean_of_a_probe(path1, path2)
-                #f.append(texturefeaturesExtract.extract_haralick_features(0, path = path1))
-            #HF_features = np.append(HF_features, row['stress angle'])
-                f = np.row_stack((texturefeaturesExtract.extract_haralick_features(0,path1, round_object='R' in index, underground=255),
-                                     texturefeaturesExtract.extract_haralick_features(0, path2, round_object= 'R' in index, underground= 255)))
+                #
+                #Haralick Features
+                #
+                f1 =texturefeaturesExtract.extract_haralick_features(0,path1, round_object='R' in index, underground=255)
 
-               # print(f)
+                f2 = texturefeaturesExtract.extract_haralick_features(0, path2, round_object= 'R' in index, underground= 255)
+                #s = np.maximum(f1, f2)
+                d = np.abs(f2-f1) 
+                # print(f)
+                f = np.row_stack((f1, f2))
+                #data.append(np.abs(np.diff(f, axis = 0)).T)
+                #data.append(d / (np.mean(f, axis = 0).T))
                 data.append(np.mean(f, axis = 0).T)
                 #print(data)
+                #data.append(f)
+
+                #
+                #GABOR FILTERS
+                #
+                # res = []
+                # sobel_filter = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+                # gabor_kernels = texturefeaturesExtract.build_filters()
+                # res1 = texturefeaturesExtract.getGaborFeatures(path1,sobel_filter, gabor_kernels)
+                # res2 = texturefeaturesExtract.getGaborFeatures(path2,sobel_filter, gabor_kernels)
+                # res.append(res1)
+                # res.append(res2)
+                # data.append(res)
+
                 targets.append(row['stress angle'])
         mean_HF_of_all_samples = pd.DataFrame(data=data, columns=["Angular Second Moment", "Contrast", "Correlation", "Sum of Squares: Variance", "Inverse Difference Moment", "Sum Average", 
-                            "Sum Variance", "Sum Entropy", "Entropy", "Difference Variance", "Difference Entropy", "Info. Measure of Correlation 1", "Info. Measure of Correlation 2"])  
+                           "Sum Variance", "Sum Entropy", "Entropy", "Difference Variance", "Difference Entropy", "Info. Measure of Correlation 1", "Info. Measure of Correlation 2"])  
         if save:
             save_data = mean_HF_of_all_samples
             save_data['targets'] = targets 
@@ -79,7 +99,7 @@ def feature_importance(data, targets):
     forest_importances = pd.Series(impotances, index=feature_names)
     print(forest_importances)
     std = np.std([tree.feature_importances_ for tree in model.estimators_], axis=0)
-    mean_impotance = np.mean(impotances)
+    mean_impotance = 1/13
     
     fig, ax = plt.subplots()
     moreImpotance = (forest_importances > mean_impotance).astype(int).values
@@ -94,7 +114,7 @@ def feature_importance(data, targets):
     #calculate mean of impotances of all features and drop features with less impotant than mean_impotances
      
    
-    print(mean_impotance)
+    #print(mean_impotance)
     for feature in feature_names: 
         
         if(forest_importances[feature] <= mean_impotance):
@@ -111,7 +131,7 @@ def perform_PCA(data, targets):
     ax = fig.add_subplot(1,1,1)
     ax.set_xlabel('P1', fontsize = 15)
     ax.set_ylabel('P2', fontsize = 15)
-    ax.set_title('Correlation between texture features and stress angle', fontsize = 20)
+    ax.set_title('Correlation between texture features and stress angle', fontsize = 10)
 
     colors = ['r', 'g', 'b', 'c']
     ta = [0,30,60,90]
@@ -154,12 +174,12 @@ def trying_with_some_classifiers(data, targets):
     ]
     pca = PCA(n_components=2)
 
-    X_reduced = pca.fit_transform(data.values)
+    X_reduced = pca.fit_transform(data)
 
     for name, rf in zip(names, classifiers):
         sum_score = 0
         for i in range(100):
-            X_train, X_test, y_train, y_test = train_test_split(X_reduced, y)
+            X_train, X_test, y_train, y_test = train_test_split(X_reduced, targets)
             rf.fit(X_train, y_train)
             #print(rf.predict_proba(X_test))
             score = rf.score(X_test, y_test)
@@ -168,15 +188,41 @@ def trying_with_some_classifiers(data, targets):
 
         print('mean score of 100 test runs = ' + str(sum_score/100)+ 'with ' + name)
 
+from sklearn.svm import LinearSVC
+def try_classify_withLBP(images_path):
+        # loop over the training images
+    samples = pd.read_csv("Klebeverbindungen_Daten/Proben.csv" , sep=';', error_bad_lines=False)
+    targets =   []
+    samples = samples.set_index('ID')
+    data = []
+    for index, row in samples.iterrows():
+        path1 = images_path + 'Probe' + index + "_1.png"
+        path2 = images_path + 'Probe'+ index + "_2.png"
+        
+        if(os.path.isfile(path1) and os.path.isfile(path2)):
+            # load the image, convert it to grayscale, and describe it
+            image1= cv2.imread(path1)
+            gray1= cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+            hist1 = texturefeaturesExtract.extract_LBP(gray1)
+            image2= cv2.imread(path2)
+            gray2= cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
+            hist2 = texturefeaturesExtract.extract_LBP(gray2)
+            # extract the label from the image path, then update the
+            # label and data lists
+            targets.append(index)
+            data.append(hist1 + hist2)
 
+    # train a Linear SVM on the data
+    trying_with_some_classifiers(data, targets)
 if __name__ == "__main__":
     #data, features =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/", save_name = "all_features.csv")
      
-    #data, features =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/SikaPower533/",  save_name = 'sika')
+    #data, features =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/SikaPower533/",  extract= True)
         
-    data, features =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/Betamate 1496V/", extract = True)
-    #data = data.iloc[: , 1:]
-    print(data)
-    print(features)
-    data = feature_importance(data, features)
-    perform_PCA(data, features)
+    data, targets =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/new_sika2/", extract = True)
+    data = feature_importance(data, targets)
+    #try_classify_withLBP(images_path="Klebeverbindungen_Daten/2D-MakroImages/Betamate 1496V/")
+    
+    #
+    perform_PCA(data, targets)
+    #trying_with_some_classifiers(data, targets)
