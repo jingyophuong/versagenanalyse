@@ -35,22 +35,9 @@ def distance_to_fitplane_cal(plane_normalvector, plane_position, point):
 #read pointcloud as dataframe
 def interpolation(data):
     print("data row count = ", data.shape)
-    xyz_minmax = []
-    for name_col in data:
-        column = data[name_col]
-        xyz_minmax.append([column.min(), column.max()])
+  
 
-    #set x,y of image
-    data['x'] = (data['x'] - xyz_minmax[0][0]) 
-    data['y'] = (data['y'] - xyz_minmax[1][0]) 
-    data['z'] = (data['z'] - xyz_minmax[2][0]) 
-
-    xyz_minmax.clear()
-    for name_col in data:
-        column = data[name_col]
-        xyz_minmax.append([column.min(), column.max()])
-
-    print(xyz_minmax)
+    #print(xyz_minmax)
     data = data.sort_values(by=['y', 'x'], ignore_index = True)
 
     n_y_data = data.groupby('y').sum()
@@ -58,38 +45,52 @@ def interpolation(data):
 
 
     in_data =  pd.DataFrame(columns=['x', 'y', 'z'])
-    xx = pd.DataFrame({'xx':np.arange(xyz_minmax[0][1])})
-    xx = xx.set_index('xx')
+    #xx = pd.DataFrame({'xx':np.arange(xyz_minmax[0][1])})
+    #xx = xx.set_index('xx')
+
     for ny in n_y: 
         data_y = data.loc[data['y'] == ny]
         data_y = data_y.set_index('x')
+      
+        if not(data_y.index.is_unique):
+            data_y = data_y[~data_y.index.duplicated(keep='first')]
+          
+        xx = pd.DataFrame({'xx': np.arange(np.min(data_y.index),np.max(data_y.index+1))})
+        xx = xx.set_index('xx')
+    
         data_y = pd.concat([data_y, xx], axis= 1)
         data_y['y'] = data_y['y'].apply(lambda a: ny )
+       
         data_y = data_y.interpolate(method ='linear', limit_direction ='forward')
         data_y.index.name = 'x'
         data_y = data_y.reset_index()
         in_data =  in_data.append(data_y)
-
+    in_data = in_data.dropna()
     print(in_data)
     data = in_data
+    #in_data.clear_data()
     data = data.sort_values(by=['x', 'y'], ignore_index = True)
-    print(data)
-    in_data =  pd.DataFrame(columns=['x', 'y', 'z'])
-    yy = pd.DataFrame({'yy': np.arange(xyz_minmax[1][1])})
-    yy = yy.set_index('yy')
-
-    for nx in range(int(xyz_minmax[0][1])):
+    #print(data)
+    #in_data =  pd.DataFrame(columns=['x', 'y', 'z'])
+    
+    n_x_data = data.groupby('x').sum()
+    n_x = n_x_data.index
+    print(n_x)
+    for nx in n_x:
         data_x = data.loc[data['x'] == nx]
         data_x = data_x.set_index('y')
+        yy = pd.DataFrame({'yy': np.arange(np.min(data_x.index),np.max(data_x.index+1), 10)})
+        yy = yy.set_index('yy')
         data_x = pd.concat([data_x, yy], axis= 1)
         data_x['x'] = data_x['x'].apply(lambda a: nx )
         data_x = data_x.interpolate(method='linear', limit_direction= 'forward')
+        #print(data_x)
         data_x.index.name = 'y'
         data_x = data_x.reset_index()
         in_data = in_data.append(data_x)
     
-    in_data = in_data.fillna(0)
-
+    in_data = in_data.dropna()
+    print(in_data)
     return in_data
 
 
@@ -212,7 +213,8 @@ def cal_all_absdata_to_reldata(directory):
    
     # iterate over files in
     # that directory
-    files = ['Probe_D91.txt', 'Probe_D92.txt', 'C12-1.txt', 'C12-2.txt']
+    files = os.listdir(directory)
+    print(files)
     for filename in files:
         f = os.path.join(directory, filename)
         # checking if it is a file
@@ -229,20 +231,7 @@ def cal_all_absdata_to_reldata(directory):
                 os.path.join(directory, 'RelativData')
                 data.to_csv( directory + 'RelativData/' +name[0] + "-rel.txt", sep = ';', index = False, header = None)
 
-# path = "ProbeE11_2_pointcloud.txt"
-# plane_path = 'plane112.txt'
-# plane_info = read_plane_configdata(plane_path)
-# print(plane_info)
-# data = pd.read_csv(path, sep=";", comment='#', header=None, names=['x', 'y', 'z'], index_col= None)
-# print(data)
-# data = relativ_z_with_plane_cal(data, plane_info[0], plane_info[1])
-# print(data)
-# #data = interpolation(data=data)
-# data.to_csv('ProbeE11_2_pointcloud-rel.txt', sep=";", index = False, header = None)
-# #data = pd.read_csv('ProbeE11_1-rel.txt', sep=';', comment='#', header=None, names=['x', 'y', 'z'], index_col= None)
-# image = from_pc_to_image(data=data)
-# image.save("ProbeE11_2_depthmap-12-20.png")
-# image.show()
+
 
 def from_pc_to_image(data, zmax, zmin):
     xyz_minmax = []
@@ -314,8 +303,40 @@ def GrayscaleImagesFromPC(zmax, zmin):
             image = from_pc_to_image(data=data, zmax= zmax, zmin= zmin)
             os.path.join(directory, 'GreyscaleImagesFromPC')
             image.save(directory + 'GreyscaleImagesFromPC/'+ name + '-depthmap.png')
-   
+
+def get_pointcloud_in_horizontal(data, step):
+    n_x_data = data.groupby('x').sum()
+    n_x = n_x_data.index
+    res = pd.DataFrame(columns=['x', 'y', 'z'])
+    for inx in n_x:
+        xx = data.loc[data['x'] == inx]
+        res = res.append(xx)
+    return res
+
+def get_all_horizontal_pointcloud(directory, step =11):
+    for filename in os.listdir(directory+ 'RelativData/'):
+        f = os.path.join(directory + 'RelativData/', filename)
+    
+        if os.path.isfile(f):
+            print(f)
+            name = filename.split('.')[0]
+            data = pd.read_csv(f, sep=";", comment='#', header=None, names=['x', 'y', 'z'], index_col= None)
+            data = interpolation(data = data)
+            print(f)
+            data = get_pointcloud_in_horizontal(data, step)
+            os.path.join(directory, 'RelativDataH')
+            data.to_csv(directory + 'RelativDataH/'+ name + 'H.txt', sep = ';', index = False, header = None)
 
 
-directory = 'Klebeverbindungen_Daten/3d/'
-cal_all_absdata_to_reldata(directory=directory)
+
+if __name__ == '__main__':
+
+    directory = r'Klebeverbindungen_Daten/3d/'
+    #cal_all_absdata_to_reldata(directory=directory)
+    get_all_horizontal_pointcloud(directory=directory)
+    
+    
+    # data = pd.read_csv(r'J:\MA\versagenanalyse\Klebeverbindungen_Daten\3d\RelativData\ProbeR2_1.txt', sep=";", comment='#', header=None, names=['x', 'y', 'z'], index_col= None)
+    # data = interpolation(data = data)
+    # data = get_pointcloud_in_horizontal(data, 11)
+    # data.to_csv(directory + 'RelativDataH/ProbeR2_1H.txt', sep = ';', index = False, header = None)
