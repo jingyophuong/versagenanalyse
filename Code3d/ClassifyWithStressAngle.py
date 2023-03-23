@@ -333,8 +333,8 @@ def classify_with_roughness3d(data_dir, save = True, cal = False, save_file = ''
     else:
   
         for index, row in samples.iterrows():
-            path1 = data_dir +"/Probe" + index + "_1-rel.txt"
-            path2 = data_dir+"/Probe" + index + "_2-rel.txt"
+            path1 = data_dir +"/Probe" + index + "_1.txt"
+            path2 = data_dir+"/Probe" + index + "_2.txt"
             
             
             if(os.path.isfile(path1) and os.path.isfile(path2)):
@@ -394,8 +394,8 @@ def classify_surface_with_roughness2d(dir , cal = False, save = False, save_file
             data = sdata.drop(['targets'], axis=1)
     if cal: 
          for index, row in samples.iterrows():
-            path1 = dir + "Probe" + index + "_1-rel.txt"
-            path2 = dir + "Probe" + index + "_2-rel.txt"
+            path1 = dir + "Probe" + index + "_1.txt"
+            path2 = dir + "Probe" + index + "_2.txt"
             if(os.path.isfile(path1) and os.path.isfile(path2)):
                 for path in [path1, path2]:
                     t = roughness2D.compute_topography_of_surface_h(path)
@@ -651,10 +651,10 @@ def classify_surface_with_curvatures(data_dir, save = True, cal = False, curvatu
         count = int(len(os.listdir(data_dir)) / 2)
         i = 1
         for index, row in samples.iterrows():
-            path1 = data_dir +"/Probe" + index + "_1-rel-depthmap.png"
-            path2 = data_dir+"/Probe" + index + "_2-rel-depthmap.png"
-            path1csv= data_dir +"../FinalPC1/Probe" + index + "_1.txt"
-            path2csv = data_dir+"../FinalPC1/Probe" + index + "_2.txt"
+            path1 = data_dir +"/Probe" + index + "_1.png"
+            path2 = data_dir+"/Probe" + index + "_2.png"
+            path1csv= data_dir +"../FinalPC/Probe" + index + "_1.txt"
+            path2csv = data_dir+"../FinalPC/Probe" + index + "_2.txt"
             
             if(os.path.isfile(path1) and os.path.isfile(path2)):
                 print(index, i, '/', count)
@@ -748,8 +748,8 @@ def classify_with_combi_textur_and_topo(images_path, topo_path, save = True, cal
             else: 
                 full = False
             #topo
-            path1 = topo_path + "Probe" + index + "_1-rel.txt"
-            path2 = topo_path + "Probe" + index + "_2-rel.txt"
+            path1 = topo_path + "Probe" + index + "_1.txt"
+            path2 = topo_path + "Probe" + index + "_2.txt"
             if(os.path.isfile(path1) and os.path.isfile(path2)):
                 roughness = roughness2D.compute_topography_of_a_probe_h(path1, path2)
             else: 
@@ -775,12 +775,12 @@ def classify_with_combi_textur_and_topo(images_path, topo_path, save = True, cal
 ##############################################################MAIN#################################################################################
 ##############################################################MAIN#################################################################################
 if __name__ == "__main__":
-    # classify_surface_with_curvatures( data_dir= r"Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/Final/", cal = True, curvature_version= 5, save_file='bm_all_curvature')
+    classify_surface_with_curvatures( data_dir= r"Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/Final/", cal = True, curvature_version= 5, save_file='bm_all_curvature')
     # classify_surface_with_curvatures( data_dir= r"Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/Final/", cal = True, curvature_version= 2)
     # classify_surface_with_curvatures( data_dir= r"Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/Final/", cal = True, curvature_version= 3)
     # classify_surface_with_curvatures( data_dir= r"Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/Final/", cal = True, curvature_version= 4)
 
-    #classify_with_roughness3d( data_dir= r"Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/RelativData", cal = True, save_file='BMroughness3d')
+    classify_with_roughness3d( data_dir= r"Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/RelativData", cal = True, save_file='BMroughness3d')
     #classify_with_roughness2d('Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/FinalPC/' , cal = False, save = True, save_file = "BMroughness2d_h_030922")
     #classify_with_roughness2d('Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/FinalPC/' , cal = False, save = True, scan_direction_vectical=False, save_file = "BMroughness2d_v_030922")
     #plt.show()

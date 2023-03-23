@@ -24,7 +24,7 @@ columns_name=["Angular Second Moment", "Contrast", "Correlation", "Sum of Square
 columns_name_std=["Angular Second Moment (Std)", "Contrast (Std)", "Correlation (Std)", "Sum of Squares: Variance (Std)", "Inverse Difference Moment (Std)", "Sum Average (Std)", 
                            "Sum Variance (Std)", "Sum Entropy (Std)", "Entropy (Std)", "Difference Variance (Std)", "Difference Entropy (Std)", "Info. Measure of Correlation 1 (Std)", "Info. Measure of Correlation 2 (Std)"]
 
-def load_features(images_path = "",  extract = False, save = False, separat = False, save_name = "", td_path = ''):
+def load_features(images_path = "",  extract = False, save = False, separat = False, save_name = ""):
     if(extract):  
         samples = pd.read_csv("Klebeverbindungen_Daten/Proben.csv" ,sep=';', error_bad_lines=False)
         targets =   []
@@ -33,12 +33,9 @@ def load_features(images_path = "",  extract = False, save = False, separat = Fa
         for index, row in samples.iterrows():
             path1 = images_path + 'Probe' + index + "_1.png"
             path2 =images_path + 'Probe'+ index + "_2.png"
-            #path_3d1 = td_path + 'Probe' + index + "_1.txt"
-            #path_3d2 = td_path + 'Probe' + index + "_2.txt"
+           
             if(os.path.isfile(path1) and os.path.isfile(path2)):# and os.path.isfile(path_3d1) and os.path.isfile(path_3d2)):
-                #
-                #Haralick Features
-                #
+               
                 f1 =texturefeaturesExtract.extract_haralick_features(0,path1, round_object='R' in index, underground=255)
 
                 f2 = texturefeaturesExtract.extract_haralick_features(0, path2, round_object= 'R' in index, underground= 255)
@@ -69,9 +66,6 @@ def load_features(images_path = "",  extract = False, save = False, separat = Fa
 
 
 
-
-
-#trying the classifiers
 def trying_with_some_classifiers(data , targets):
     names = [
         "Nearest Neighbors",
@@ -80,10 +74,7 @@ def trying_with_some_classifiers(data , targets):
         #"Gaussian Process",
         "Decision Tree",
         "Random Forest",
-        #"Neural Net",
-        #"AdaBoost",
-        #"Naive Bayes",
-        #"QDA",
+        
     ]
     classifiers = [
 
@@ -242,7 +233,7 @@ if __name__ == "__main__":
      
     #data, features =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/SikaPower533/",  extract= True)
         
-    data, targets =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/BM/", save = True,extract = True, separat = False, save_name='Sk_2d.txt', td_path='Klebeverbindungen_Daten/AP5-3D Punktwolken/SK/FinalPC/')
+    data, targets =  load_features(images_path="Klebeverbindungen_Daten/2D-MakroImages/BM/", save = True,extract = True, separat = False, save_name='Sk_2d.txt')
     
     data = feature_importance(data, targets)
     #feature_selection(data, targets)

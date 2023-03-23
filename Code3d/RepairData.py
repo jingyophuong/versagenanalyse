@@ -217,7 +217,7 @@ def relativ_z_with_plane_cal(data, plane_normalvector, plane_position):
 
 
 
-def cal_all_absdata_to_reldata(absdata_dir, plane_dir):     
+def cal_all_absdata_to_reldata(absdata_dir, plane_dir, reldata_dir):     
     # assign directory
    
     # iterate over files in
@@ -239,8 +239,8 @@ def cal_all_absdata_to_reldata(absdata_dir, plane_dir):
                     print(planeinfo)
                     data = relativ_z_with_plane_cal(data=data, plane_normalvector= planeinfo[0], plane_position= planeinfo[1])
                     
-                    os.path.join(absdata_dir + "../", 'RelativData')
-                    data.to_csv( plane_dir + "../" + 'RelativData/' +name[0] + "-rel.txt", sep = ';', index = False, header = None)
+                    os.path.join(reldata_dir)
+                    data.to_csv(reldata_dir +name[0] + ".txt", sep = ';', index = False, header = None)
 
 
 
@@ -309,9 +309,9 @@ def get_pointcloud_in_horizontal(data, step):
         res = res.append(xx)
     return res
 
-def get_all_horizontal_pointcloud(directory, step =11):
-    for filename in os.listdir(directory):
-        f = os.path.join(directory , filename)
+def get_all_horizontal_pointcloud(inputdirectory, output_dir, step =11):
+    for filename in os.listdir(inputdirectory):
+        f = os.path.join(inputdirectory , filename)
     
         if os.path.isfile(f):
             print(f)
@@ -320,8 +320,8 @@ def get_all_horizontal_pointcloud(directory, step =11):
             data = interpolation(data = data)
             #print(f)
             data = get_pointcloud_in_horizontal(data, step)
-            os.path.join(directory + "../", 'HorizontalProfiles')
-            data.to_csv(directory + "../"+'HorizontalProfiles/'+ name + '.txt', sep = ';', index = False, header = None)
+            os.path.join(output_dir)
+            data.to_csv(output_dir+ name + '.txt', sep = ';', index = False, header = None)
 
 
 def test_cal_abstorel():
@@ -337,26 +337,23 @@ def test_cal_abstorel():
         data = relativ_z_with_plane_cal(data=data1, plane_normalvector= planeinfo[0], plane_position= planeinfo[1])
         data.to_csv('teste12.txt', sep = ';', index = False, header = None)
 
-def GrayscaleImagesFromPC(zmax, zmin, directory):
+def GrayscaleImagesFromPC(zmax, zmin, directory, out_directory):
     
-        # iterate over files in
-        # that directory
-    for filename in os.listdir(directory+ 'RelativData/'):
+    for filename in os.listdir(directory):
 
-        f = os.path.join(directory + 'RelativData/', filename)
+        f = os.path.join(directory, filename)
         # checking if it is a file
         all_data = pd.DataFrame(columns=['x', 'y', 'z'])
       
-        if os.path.isfile(f): #and 'S7_1' in f:
-            #if('S7_2' in f or 'S12' in f or 'S18_2' in f or 'S21_2' in f):
+        if os.path.isfile(f): 
             name = filename.split('.')[0]
             data = pd.read_csv(f, sep=";", comment='#', header=None, names=['x', 'y', 'z'], index_col= None)
             image = from_pc_to_image(data=data, zmax= zmax, zmin= zmin)
-            #image = crop_minAreaRect(np.array(image))
-            os.path.join(directory, 'GrayscaleImagesFromPC')
-            image.save(directory + 'GrayscaleImagesFromPC/'+ name + '-depthmap.png')
 
-def crop_minAreaRectForAllImage(directory):
+            os.path.join(out_directory)
+            image.save(out_directory + name + '.png')
+
+def crop_minAreaRectForAllImage(directory, output_dir):
        # that directory
     for filename in os.listdir(directory):
         print(filename)
@@ -364,7 +361,7 @@ def crop_minAreaRectForAllImage(directory):
             img = cv2.imread(directory+filename, -1)
             #print(img)
             img = crop_minAreaRect(img)
-            cv2.imwrite(directory + '../Final/' + filename, img)
+            cv2.imwrite(output_dir + filename, img)
 
 def getzminmax(directory):
    
@@ -406,8 +403,7 @@ def noise_reduction_with_histogram(data, bins = 256, per= 2):
   
     hist[hist<=noise] = 0
     hist_0_d = np.where(hist == 0)[0]
-    #plt.bar(x = bins[0:-1], height = hist, width=10)
-    #plt.show()
+   
     z_d = np.digitize(z, bins)    
     for hist_0_i in hist_0_d:
         z[z_d==hist_0_i] = float('nan')
@@ -416,14 +412,14 @@ def noise_reduction_with_histogram(data, bins = 256, per= 2):
     data= data.dropna()
     return data
 
-def noise_reduction_for_all_files(directory):
-    for filename in os.listdir(directory):
-        f = os.path.join(directory, filename)
+def noise_reduction_for_all_files(input_dir, output_dir):
+    for filename in os.listdir(input_dir):
+        f = os.path.join(input_dir, filename)
         if os.path.isfile(f):
             data = pd.read_csv(f, sep=";", comment='#', header=None, names=['x', 'y', 'z'], index_col= None)
             nr_data = noise_reduction_with_histogram(data)
-            os.path.join(directory + "../", 'NoiseReduced')
-            nr_data.to_csv(directory + "../"+'NoiseReduced/'+ filename, sep = ';', index = False, header = None)
+            os.path.join(output_dir)
+            nr_data.to_csv(output_dir + filename, sep = ';', index = False, header = None)
         else:
             print('directory dont exist')
 
@@ -564,179 +560,48 @@ if __name__ == '__main__1':
 
     name =   filename.split('-')[0]
     data_h.to_csv(output_dir + name + '.txt', sep=';', header = None, index = False)
+
 if __name__ == '__main__':
 
-    # n  = 'E_2'
+    #root:
+    root = r'Klebeverbindungen_Daten/AP5-3D Punktwolken/SK/'
+    #input path
+    absdir = root + "Data/'
+    planedir =root + "Plane/'
 
-    # img = cv2.imread('Klebeverbindungen_Daten\AP5-3D Punktwolken\BM\GrayscaleImagesFromPC\Probe' + n + '-rel-depthmap.png')
-        
-    # cropimg = crop_minAreaRect(img)
-    # plt.imshow(cropimg)
-    # plt.show()
-    # cv2.imwrite('Klebeverbindungen_Daten\AP5-3D Punktwolken\BM\Final\Probe' + n + '-rel-depthmap.png', cropimg)
-    # dir = r'Klebeverbindungen_Daten/AP5-3D Punktwolken/SK-TEST/'
-    # absdir = dir +'Data/'
-    # planedir = dir + 'Plane/'
-    # reldir = dir + 'RelativData/'
-    # #ndir =  r'Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/NoiseReduced/'
-    # imdir = dir + 'GrayscaleImagesFromPC/'
-    # outdir =  dir + 'FinalPC/'
-    # #cal_all_absdata_to_reldata(absdata_dir=absdir, plane_dir=planedir)
-    # #GrayscaleImagesFromPC(zmin = -2500, zmax = 2500, directory=dir)
-    # #crop_minAreaRectForAllImage(imdir)
-    # deapthmapTOPointCloud(input_dir=dir + 'Final/', dy = 45, dx = 40, output_dir=outdir)
+    #output path
+    reldir = root + 'RelativData/'
+    dir =  root + 'SK/'
+    noise_reduced_dir = root + 'NoiseReduced'
+    hdir = root + 'HorizontalProfiles/'
+    #inDir = r'Klebeverbindungen_Daten/AP5-3D Punktwolken/SK/Interpolation/'
+    imdir = root + 'GrayscaleImagesFromPC/'
+    finalimdir = root + '/Final/'
+    outdirPC =  root + 'FinalPC/'
 
+    isdir = os.path.isdir( reldir)
+    if not isdir: 
+        os.mkdir(reldir) 
+    cal_all_absdata_to_reldata(absdata_dir=absdir, plane_dir=planedir, reldata_dir = reldir)
     
-    #
-    #get_all_horizontal_pointcloud(directory=r'Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/RelativData/', step = 45)
-    #noise_reduction_for_all_files(reldir)    
-    
+    #noise_reduction_for_all_files(reldir, noise_reduced_dir)
+    isdir = os.path.isdir(imdir)
+    if not isdir: 
+        os.mkdir(imdir) 
+    GrayscaleImagesFromPC(zmin = -2500, zmax = 2500, directory=reldir, out_directory=imdir)
 
-    #zminmax = getzminmax(dir)
-    #print(zminmax)
-    #data = pd.read_csv(r'Klebeverbindungen_Daten\AP5-3D Punktwolken\BM\RelativData\ProbeS17_1-rel.txt', sep=";", comment='#', header=None, names=['x', 'y', 'z'], index_col= None)
-    #data.hist(column = 'z', bins = 255)
-    # print(np.max(data.z) - np.min(data.z))
-    #plt.show()
-    # #data = interpolation(data = data)
+    isdir = os.path.isdir(finalimdir)
+    if not isdir: 
+        os.mkdir(finalimdir)
+    crop_minAreaRectForAllImage(imdir, finalimdir)
     
+    isdir = os.path.isdir(outdirPC)
+    if not isdir: 
+        os.mkdir(outdirPC) 
+    deapthmapTOPointCloud(input_dir=finalimdir, dy = 100, dx = 40, output_dir=outdirPC)
+    
+    isdir = os.path.isdir(hdir)    
+    if not isdir: 
+        os.makedirs(hdir) 
+    get_all_horizontal_pointcloud(outdirPC, hdir, step = 35)
    
-    # im = cv2.imread(r'Klebeverbindungen_Daten\AP5-3D Punktwolken\BM\GrayscaleImagesFromPC\ProbeS17_1-rel-depthmap.png')
-    # # calculate mean value from RGB channels and flatten to 1D array
-    # vals = im.mean(axis=2).flatten()
-    # # plot histogram with 255 bins
-    # b, bins, patches = plt.hist(vals, 255)
-    # plt.xlim([0,255])
-    # plt.show()
-    #plt.imshow(img)
-    #plt.show()
-   
-    # directory = 'J:/MA/versagenanalyse/Klebeverbindungen_Daten/AP5-3D Punktwolken/BM/GrayscaleImagesFromPC'
-    
-    # maxshape = 512
-    # for filename in os.listdir(directory):
-    #     f = os.path.join(directory, filename)
-    #     img = Image.open(f)
-    #     w,h = img.size
-    #     bx = int((maxshape - w ) / 2)
-    #     by = int((maxshape - h) / 2)
-    #     bimg = add_border(img,  border=(bx, by, maxshape - w -bx, maxshape - h - by))
-    #     bimg.save(f)
-    # print(maxshape)
-
-
-    #get_all_horizontal_pointcloud(directory=dir, step = 35)
-  
-    
-
-
-    absdir = r'Klebeverbindungen_Daten/AP5-3D Punktwolken/SK/Data/'
-    planedir = r'Klebeverbindungen_Daten/AP5-3D Punktwolken/SK/Plane/'
-    reldir = r'Klebeverbindungen_Daten/AP5-3D Punktwolken/SK/RelativData/'
-    dir =  r'Klebeverbindungen_Daten/AP5-3D Punktwolken/SK/'
-    hdir = r'Klebeverbindungen_Daten/AP5-3D Punktwolken/SK/HorizontalProfiles/'
-    inDir = r'Klebeverbindungen_Daten/AP5-3D Punktwolken/SK/Interpolation/'
-    imdir = 'Klebeverbindungen_Daten/AP5-3D Punktwolken/SK/'
-    outdir =  'Klebeverbindungen_Daten/AP5-3D Punktwolken/SK/FinalPC/'
-    #crop_minAreaRectForAllImage(imdir)
-    #deapthmapTOPointCloud(input_dir=imdir, dy = 100, dx = 40, output_dir=outdir)
-    # isdir = os.path.isdir( reldir)
-    # if not isdir: 
-    #     os.mkdir(reldir) 
-    #cal_all_absdata_to_reldata(absdata_dir=absdir, plane_dir=planedir)
-    # isdir = os.path.isdir(dir)
-    # if not isdir: 
-    #     os.makedirs(dir) 
-    #noise_reduction_for_all_files(reldir)
-    # isdir = os.path.isdir(hdir)    
-    # if not isdir: 
-    #     os.makedirs(hdir) 
-    #get_all_horizontal_pointcloud(dir, step = 35)
-    #data = pd.read_csv(reldir + 'ProbeE7_1-rel.txt', sep=";", comment='#', header=None, names=['x', 'y', 'z'], index_col= None)
-    #indata = interpolation(data)
-    #indata.to_csv(inDir+'ProbeE7_1.txt', sep=';')
-    #img = from_pc_to_image(data=data, zmin= -2500, zmax= 2500)
-    #img.save('ProbeE7_1-depthmap.png')
-    #GrayscaleImagesFromPC(zmin = -2500, zmax = 2500, directory=dir)
-    #plt.imshow(img)
-    #plt.show()
-
-    #dir  = r'Klebeverbindungen_Daten\2D-MakroImages\BM'
-    # samples = pd.read_csv("Klebeverbindungen_Daten/Proben.csv" ,sep=';', error_bad_lines=False)
-    # samples = samples.set_index("ID")
-    # targets = []
-    # #feature_names = ['Sa', 'Sq', 'Sz', 'Ssk', 'Ssu']
-   
-    # maxheight = 1027
-    # for index, row in samples.iterrows():
-    #     path1 = dir + "\Probe" + index + "_1.png"
-    #     path2 = dir + "\Probe" + index + "_2.png"
-    #     if(os.path.isfile(path1) and os.path.isfile(path2) and row['stress angle'] != 90 ):
-    #         img1 = Image.open(path1)
-    #         img2 = Image.open(path2)
-            
-    #         #if(maxheight < img1.size[1] + img2.size[1]):
-    #         #   maxheight = img1.size[1] + img2.size[1]
-    # #print(maxheight)
-    #         im = Image.new(mode = 'RGB', size=(maxheight, maxheight))
-    #         if np.max(img1.size) > maxheight:
-    #             new_size = (maxheight, int(maxheight * np.min(img1.size)  / np.max(img1.size)))
-    #             img1 = img1.resize(new_size)
-    #         if np.max(img2.size) > maxheight:
-    #             new_size = (maxheight, int(maxheight * np.min(img2.size)  / np.max(img2.size)))
-    #             img2 = img2.resize(new_size)
-    #         x1 = int((maxheight- img1.size[1] - img2.size[1] -5) /2)
-    #         x2 = x1 + img1.size[1] + 5
-    #         x3 = int((maxheight- img1.size[0]) /2)
-    #         x4 = int((maxheight- img2.size[0])/2)
-
-    #         im.paste(img1, ( x3, x1))
-    #         im.paste(img2, ( x4, x2) )
-    #         im.save(dir + '\\' + str(row['stress angle']) + '\\'+ index + '.png')
-
-    # new_width = 846
-    # for f in os.listdir(dir):
-    #     if(os.path.isfile(dir + '\\'+ f)):
-    #         print(f)
-    #                 # Load the image
-    #         img = cv2.imread(dir + '\\'+ f)
-
-    #         # Add salt-and-pepper noise to the image.
-    #         noise_img = random_noise(img, mode='s&p',amount=0.2)
-
-    #         # The above function returns a floating-point image
-    #         # on the range [0, 1], thus we changed it to 'uint8'
-    #         # and from [0,255]
-    #         noise_img = np.array(255*noise_img, dtype = 'uint8')
-
-    #         # Display the noise image
-    #         cv2.imwrite(dir + '\\..\\BM3_noise\\' +f , noise_img)
-
-    # new_width = 868
-    # for f in os.listdir(dir):
-    #     if(os.path.isfile(dir + '\\'+ f)):
-    #         print(f)
-
-    #         img = Image.open(dir + '\\' + f)
-    #         new_height = int(new_width * img.size[1] / img.size[0])
-    #         new_img = img.resize((new_width, new_height))
-    #         new_img.save(dir + '\\..\\SK2_klein\\' +f )
-                
-
-    file = 'Klebeverbindungen_Daten\Proben.csv'
-    proben = pd.read_csv(file, sep=';')
-    
-    bm = proben[proben['adhasiv'] == 'BM']
-    sk = proben[proben['adhasiv'] == 'SK']
-
-    bmrt2 = bm[bm['stress rate'] == '2']
-    bmrt2 = bmrt2[bmrt2['temperature'] == 'RT']
-    bmrt2 = bmrt2[bmrt2['Proben-Kennzeichen'] != 'Proben bei uns nicht vorhanden']
-    skrt2 = sk[sk['stress rate'] == '2']
-    skrt2 = skrt2[skrt2['temperature'] == 'RT']
-    skrt2 = skrt2[skrt2['Proben-Kennzeichen'] != 'Proben bei uns nicht vorhanden']
-    print(bmrt2)
-    print(skrt2)
-    print(len(bmrt2)/34)
-    print(len(skrt2)/28)
-    #print(bm)
